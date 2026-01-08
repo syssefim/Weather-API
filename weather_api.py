@@ -1,6 +1,12 @@
 import requests
+import os
+from dotenv import load_dotenv
 
-API_KEY = '8VXW7UBZSDUMZN8NW569D55XP'
+
+
+load_dotenv()
+API_KEY = os.getenv("WEATHER_API_KEY")
+
 LOCATION = 'San Francisco,CA'
 BASE_URL = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/'
 UNIT_GROUP = 'metric'
@@ -16,7 +22,18 @@ response = requests.get(base_url)
 if response.status_code == 200:
     print("Data was retreived!")
     weather_data = response.json()
-    print(weather_data)
+
+    if 'currentConditions' in weather_data:
+        condition = weather_data['currentConditions']['conditions']
+        print(condition)
+    else:
+        print("Current conditions data not found.")
+
+    if 'currentConditions' in weather_data:
+        condition = weather_data['currentConditions']['datetime']
+        print(condition)
+    else:
+        print("Current conditions data not found.")
 else:
     print(f"Failed to retreive data {response.status_code}")
 
