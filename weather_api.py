@@ -1,6 +1,8 @@
 import requests
 import os
 from dotenv import load_dotenv
+import redis
+import json
 
 
 
@@ -16,37 +18,88 @@ base_url = f"{BASE_URL}{LOCATION}?unitGroup={UNIT_GROUP}&contentType={CONTENT_TY
 
 
 
-try:
-    response = requests.get(base_url, timeout=5, verify=True)
-    response.raise_for_status() 
 
-except requests.exceptions.HTTPError as errh:
-    print(f"HTTP Error: {errh}")
-except requests.exceptions.ReadTimeout as errrt:
-    print("Timeout Error: The server took too long to respond.")
-except requests.exceptions.ConnectionError as conerr:
-    print("Connection Error: Check your internet or the URL.")
-except requests.exceptions.RequestException as errex:
-    print(f"General Error: {errex}")
 
-else:
-    print("Data was retrieved!")
-    
-    try:
-        weather_data = response.json()
-        
-        if 'currentConditions' in weather_data:
-            current_conditions = weather_data['currentConditions']
-            
-            condition_desc = current_conditions.get('conditions', 'Unknown')
-            condition_time = current_conditions.get('datetime', 'Unknown')
-            
-            print(f"Condition: {condition_desc}")
-            print(f"Time: {condition_time}")
+
+
+def main():
+    r = redis.Redis(host='localhost', port=6379, db=0)
+
+    fetch_weather_data(LOCATION)
+
+
+
+
+
+
+
+
+
+# Function to fetch weather data either from the cache or the external route
+def fetch_weather_data(location):
+    # Check if data is available in the cache
+    weather_data = r.get(location)
+    if weather_data is None:
+        try:
+          response = requests.get(base_url, timeout=5, verify=True)
+          response.raise_for_status() 
+
+        except requests.exceptions.HTTPError as errh:
+         print(f"HTTP Error: {errh}")
+        except requests.exceptions.ReadTimeout as errrt:
+            print("Timeout Error: The server took too long to respond.")
+        except requests.exceptions.ConnectionError as conerr:
+            print("Connection Error: Check your internet or the URL.")
+        except requests.exceptions.RequestException as errex:
+            print(f"General Error: {errex}")
+
         else:
-            print("Current conditions data not found in response.")
+            print("Data was retrieved!")
+    
+
+        try:
+            weather_data = response.json()
+        
+            if 'currentConditions' in weather_data:
+                current_conditions = weather_data['currentConditions']
             
-    except ValueError:
-        print("Error: content is not valid JSON")
+                condition_desc = current_conditions.get('conditions', 'Unknown')
+                condition_time = current_conditions.get('datetime', 'Unknown')
+            
+                print(f"Condition: {condition_desc}")
+                print(f"Time: {condition_time}")
+
+                r.set(location, json.dumps(user_data))
+            else:
+                print("Current conditions data not found in response.")
+            
+        except ValueError:
+            print("Error: content is not valid JSON")        
+
+
+    return location
+
+
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#notes
+#possible guide to setting up redis for this project:
+#https://www.geeksforgeeks.org/system-design/redis-cache/
 
 
