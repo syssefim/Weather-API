@@ -23,9 +23,21 @@ base_url = f"{BASE_URL}{LOCATION}?unitGroup={UNIT_GROUP}&contentType={CONTENT_TY
 
 
 def main():
-    r = redis.Redis(host='localhost', port=6379, db=0)
+    
 
-    fetch_weather_data(LOCATION)
+    cached_weather_data = fetch_weather_data(LOCATION)
+
+    
+
+    # Fetch user data directly from the external route
+    response = requests.get(BASE_URL)
+    external_weather_data = response.json()
+
+    # Compare the data
+    if cached_weather_data == external_weather_data:
+        print("Data retrieved from cache matches data fetched from the external route.")
+    else:
+        print("Data mismatch: Cached data differs from data fetched from the external route.")
 
 
 
@@ -37,6 +49,8 @@ def main():
 
 # Function to fetch weather data either from the cache or the external route
 def fetch_weather_data(location):
+    r = redis.Redis(host='localhost', port=6379, db=0)
+
     # Check if data is available in the cache
     weather_data = r.get(location)
     if weather_data is None:
@@ -69,7 +83,7 @@ def fetch_weather_data(location):
                 print(f"Condition: {condition_desc}")
                 print(f"Time: {condition_time}")
 
-                r.set(location, json.dumps(user_data))
+                r.set(location, json.dumps(weather_data))
             else:
                 print("Current conditions data not found in response.")
             
@@ -77,7 +91,7 @@ def fetch_weather_data(location):
             print("Error: content is not valid JSON")        
 
 
-    return location
+    return weather_data
 
 
 
