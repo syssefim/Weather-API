@@ -33,9 +33,10 @@ def main():
     # Fetch user data directly from the external route
     response = requests.get(base_url)
     external_weather_data = response.json()
-    print(json.dumps(external_weather_data, indent=4, sort_keys=True))
-    # todays_weather = external_weather_data['datetime']
-    # print(todays_weather)
+    #print(json.dumps(external_weather_data, indent=4, sort_keys=True))
+    print(external_weather_data['address'])
+    print(external_weather_data['currentConditions']['datetime'])
+    print(external_weather_data['currentConditions']['conditions'])
 
     # Compare the data
     # if cached_weather_data == external_weather_data:
