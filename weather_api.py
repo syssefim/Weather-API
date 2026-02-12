@@ -6,7 +6,7 @@ import json
 from datetime import date
 
 
-
+#load weather api key from .env
 load_dotenv()
 API_KEY = os.getenv("WEATHER_API_KEY")
 
@@ -18,31 +18,29 @@ CONTENT_TYPE = 'json'
 base_url = f"{BASE_URL}{LOCATION}?unitGroup={UNIT_GROUP}&contentType={CONTENT_TYPE}&key={API_KEY}"
 
 
+# Connect to Redis
+r = redis.Redis(host='localhost', port=6379, db=0)
 
+#Time to live value for redis cache
+CACHE_TTL = 1800
 
 
 
 
 def main():
-    
 
-    #cached_weather_data = fetch_weather_data(LOCATION)
+    # Fetch weather data using caching
+    cached_weather_data = fetch_weather_data(LOCATION)
 
-    
+    #print weather data if it exists
+    if cached_weather_data:
+        print('The weather at', cached_weather_data['address'].split(',')[0],\
+            'at', cached_weather_data['currentConditions']['datetime'],\
+            'is', cached_weather_data['currentConditions']['conditions'].lower())
+    else:
+        print('Could not retreive weather data at this time...')
 
-    # Fetch user data directly from the external route
-    response = requests.get(base_url)
-    external_weather_data = response.json()
-    #print(json.dumps(external_weather_data, indent=4, sort_keys=True))
-    print(external_weather_data['address'])
-    print(external_weather_data['currentConditions']['datetime'])
-    print(external_weather_data['currentConditions']['conditions'])
 
-    # Compare the data
-    # if cached_weather_data == external_weather_data:
-    #     print("Data retrieved from cache matches data fetched from the external route.")
-    # else:
-    #     print("Data mismatch: Cached data differs from data fetched from the external route.")
 
 
 
@@ -53,72 +51,41 @@ def main():
 
 
 # Function to fetch weather data either from the cache or the external route
-# def fetch_weather_data(location):
-#     r = redis.Redis(host='localhost', port=6379, db=0)
+def fetch_weather_data(location):
+    weather_data = r.get(location)
 
-#     # Check if data is available in the cache
-#     weather_data = r.get(location)
-#     if weather_data is None:
-#         try:
-#           response = requests.get(base_url, timeout=5, verify=True)
-#           response.raise_for_status() 
-
-#         except requests.exceptions.HTTPError as errh:
-#          print(f"HTTP Error: {errh}")
-#         except requests.exceptions.ReadTimeout as errrt:
-#             print("Timeout Error: The server took too long to respond.")
-#         except requests.exceptions.ConnectionError as conerr:
-#             print("Connection Error: Check your internet or the URL.")
-#         except requests.exceptions.RequestException as errex:
-#             print(f"General Error: {errex}")
-
-#         else:
-#             print("Data was retrieved!")
-    
-
-#         try:
-#             weather_data = response.json()
-        
-#             if 'currentConditions' in weather_data:
-#                 current_conditions = weather_data['currentConditions']
+    if weather_data is None:
+        try:
+            # 1. Wrap the network call in a try/except block
+            response = requests.get(base_url, timeout=10)
             
-#                 condition_desc = current_conditions.get('conditions', 'Unknown')
-#                 condition_time = current_conditions.get('datetime', 'Unknown')
+            # 2. Check for HTTP errors
+            response.raise_for_status() 
             
-#                 print(f"Condition: {condition_desc}")
-#                 print(f"Time: {condition_time}")
-
-#                 r.set(location, json.dumps(weather_data))
-#             else:
-#                 print("Current conditions data not found in response.")
+            weather_data = response.json()
             
-#         except ValueError:
-#             print("Error: content is not valid JSON")        
+            # Store in cache
+            r.set(location, json.dumps(weather_data), ex=CACHE_TTL)
+            print("Data received from API...")
+            
+            return weather_data
+            
+        except requests.exceptions.RequestException as e:
+            # This catches connection errors, timeouts, and HTTP errors
+            print(f"Network error: {e}")
+            return None
+            
+        except json.JSONDecodeError:
+            print("Error parsing data from API")
+            return None
+    else:
+        print('Data retreived from redis cache...')
+        return json.loads(weather_data)
 
 
-#     return weather_data
 
 
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#notes
-#possible guide to setting up redis for this project:
-#https://www.geeksforgeeks.org/system-design/redis-cache/
-
-
