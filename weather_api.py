@@ -3,7 +3,8 @@ import os
 from dotenv import load_dotenv
 import redis
 import json
-from datetime import date
+from datetime import date, time
+from flask import Flask
 
 
 #load weather api key from .env
@@ -24,21 +25,28 @@ r = redis.Redis(host='localhost', port=6379, db=0)
 #Time to live value for redis cache
 CACHE_TTL = 1800
 
+#flask
+app = Flask(__name__)
 
 
 
-def main():
 
+
+
+
+
+@app.route('/')
+def home():
     # Fetch weather data using caching
     cached_weather_data = fetch_weather_data(LOCATION)
 
     #print weather data if it exists
     if cached_weather_data:
-        print('The weather at', cached_weather_data['address'].split(',')[0],\
-            'at', cached_weather_data['currentConditions']['datetime'],\
-            'is', cached_weather_data['currentConditions']['conditions'].lower())
+        return f"The weather at {cached_weather_data['address'].split(',')[0]}\
+            at {cached_weather_data['currentConditions']['datetime']}\
+            is {cached_weather_data['currentConditions']['conditions'].lower()}"
     else:
-        print('Could not retreive weather data at this time...')
+        return 'Could not retreive weather data at this time...'
 
 
 
@@ -88,4 +96,4 @@ def fetch_weather_data(location):
 
 
 if __name__ == "__main__":
-    main()
+    app.run()
