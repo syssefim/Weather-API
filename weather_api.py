@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import redis
 import json
 from datetime import date, time
-from flask import Flask
+from flask import Flask, render_template, redirect, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -18,7 +18,7 @@ BASE_URL = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/se
 UNIT_GROUP = 'metric'
 CONTENT_TYPE = 'json'
 
-base_url = f"{BASE_URL}{LOCATION}?unitGroup={UNIT_GROUP}&contentType={CONTENT_TYPE}&key={API_KEY}"
+
 
 
 # Connect to Redis
@@ -56,6 +56,21 @@ def home():
             is {cached_weather_data['currentConditions']['conditions'].lower()}"
     else:
         return 'Could not retreive weather data at this time...'
+    
+
+
+@app.route('/<city>')
+def city(city):
+    cached_weather_data = fetch_weather_data(city)
+
+    if cached_weather_data:
+        return f"The weather at {cached_weather_data['address'].split(',')[0]}\
+            at {cached_weather_data['currentConditions']['datetime']}\
+            is {cached_weather_data['currentConditions']['conditions'].lower()}"
+    else:
+        return 'Could not retreive weather data at this time...'
+
+    #return render_template('city.html', content=city)
 
 
 
@@ -69,6 +84,8 @@ def home():
 
 # Function to fetch weather data either from the cache or the external route
 def fetch_weather_data(location):
+    base_url = f"{BASE_URL}{location}?unitGroup={UNIT_GROUP}&contentType={CONTENT_TYPE}&key={API_KEY}"
+
     weather_data = r.get(location)
 
     if weather_data is None:
