@@ -5,6 +5,8 @@ import redis
 import json
 from datetime import date, time
 from flask import Flask
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 
 #load weather api key from .env
@@ -27,6 +29,12 @@ CACHE_TTL = 1800
 
 #flask
 app = Flask(__name__)
+# Initialize Limiter with a key function (here, using the client's IP address)
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"]
+)
 
 
 
@@ -36,6 +44,7 @@ app = Flask(__name__)
 
 
 @app.route('/')
+@limiter.limit("5 per minute")
 def home():
     # Fetch weather data using caching
     cached_weather_data = fetch_weather_data(LOCATION)
