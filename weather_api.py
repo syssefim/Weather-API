@@ -12,6 +12,8 @@ from flask_limiter.util import get_remote_address
 #load weather api key from .env
 load_dotenv()
 API_KEY = os.getenv("WEATHER_API_KEY")
+REDIS_HOST = os.getenv("REDIS_HOST")
+REDIS_PORT = os.getenv("REDIS_PORT")
 
 LOCATION = 'Kortum Trail, Jenner, CA 95450'
 BASE_URL = 'https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/'
@@ -22,7 +24,7 @@ CONTENT_TYPE = 'json'
 
 
 # Connect to Redis
-r = redis.Redis(host='localhost', port=6379, db=0)
+r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
 
 #Time to live value for redis cache
 CACHE_TTL = 1800
